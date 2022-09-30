@@ -3,6 +3,7 @@ import numpy as np
 import math
 from sklearn.preprocessing import MinMaxScaler
 from scipy.spatial import distance
+import umap
 
 trajectories = pickle.load(open('./trajectories.pkl', 'rb'))
 penult = pickle.load(open('./penult_features.pkl', 'rb'))
@@ -39,6 +40,9 @@ def get_gaussians(feats, labels, n_classes=10):
 
     return gaussians
 
+def dimred(feats):
+    return umap.UMAP().fit_transform(np.reshape(feats, (feats.shape[0], np.prod(feats.shape[1:]))))
+
 def scaled_mahalanobis(feats, gaussians):
     dists = []
 
@@ -51,7 +55,11 @@ def scaled_mahalanobis(feats, gaussians):
         dists.append(min_dist)
 
     return MinMaxScaler().fit_transform(np.reshape(dists, (-1, 1)))
-        
+
+
+# dimred makes it work, it's not very gaussian otherwise
+tr_X = dimred(tr_X)
+
 gaussians_pen = get_gaussians(pe_X, y)
 gaussians_tra = get_gaussians(tr_X, y)
 tra_dists = scaled_mahalanobis(tr_X, gaussians_tra)

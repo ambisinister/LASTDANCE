@@ -5,3 +5,16 @@ This is the repo for LASTDANCE, a novel method for out-of-distribution detection
 TODO
 project onto unit ball -> cosine similarity
 johnson lindenstrauss bound maybe?
+
+NOTES
+
+a bug has led me to something funny about this I didn't realize before.
+
+if you do not set the model with model.eval(), the batch norm layers will stay on and this overlap is far more likely to happen. If you set the model to model.eval(), it's more common for the ood points to land far away, but they can still land in distribution. However, methods like MC dropout, which rely on the model using stochastic layers like MC dropout, don't perform well out of distribution. I wonder why!!
+
+I will leave the model in train mode so that this issue is more noticable and prominent
+
+Mahalanobis framework paper (alice used this) https://proceedings.neurips.cc/paper/2018/file/abdeb6f575ac5c6676b747bca8d09cc2-Paper.pdf
+
+OODL paper, which we won't compare to because it requires the OOD labels to fit, but that we de facto do anyways
+https://arxiv.org/pdf/1910.10307.pdf

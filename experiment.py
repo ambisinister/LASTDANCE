@@ -28,7 +28,7 @@ def get_model(modelname='resnet'):
 
 def train_net(net, trainloader, optimizer, criterion, epochs=40):
 
-    for epoch in range(40):  # loop over the dataset multiple times
+    for epoch in range(epochs):  # loop over the dataset multiple times
 
         running_loss = 0.0
         for i, data in enumerate(trainloader, 0):
@@ -85,12 +85,20 @@ def extract_features(feature_extractor, loader, node):
 
     return feats
 
-def get_trajectories(net, testloader, testloader_SVHN, plot=False):
+def get_trajectories(net, testloader, testloader_SVHN, plot=False, single_node=None):
 
     # Create feature extractor: try to just do all of it and split if memory is an issue
     nodes, _ = get_graph_node_names(net)
+    if single_node is not None:
+        nodes = [nodes[single_node]]
+        
     pairs = []
-    labs = [*testset.targets, *[10 for _ in testset_SVHN.dataset.labels[testset_SVHN.indices]]]    
+    try:
+        svhn_labs = testset_SVHN.labels
+    except:
+        svhn_labs = testset_SVHN.dataset.labels[testset_SVHN.indices]
+        
+    labs = [*testset.targets, *[10 for _ in svhn_labs]]    
 
     for node in nodes:
         print(node)
@@ -102,7 +110,7 @@ def get_trajectories(net, testloader, testloader_SVHN, plot=False):
 
         f = [*feats_cifar, *feats_svhn]
 
-        if node == nodes[-2]:
+        if single_node is not None or node == nodes[-2]:
             pickle.dump([f, labs], open('./penult_features.pkl', 'wb'))
 
         mapper = umap.UMAP().fit(np.array(f))
@@ -161,7 +169,9 @@ if __name__ == "__main__":
     except:
         net = train_net(net, trainloader, optimizer, criterion)
 
-    net.eval()
+    # Set the model to eval
+    # Comment this line out to leave batch norm layers in
+    # net.eval()
     
     test(net, testloader)
 
