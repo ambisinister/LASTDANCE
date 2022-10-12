@@ -54,16 +54,18 @@ def scaled_mahalanobis(feats, gaussians):
                 min_dist = d
         dists.append(min_dist)
 
-    return MinMaxScaler().fit_transform(np.reshape(dists, (-1, 1)))
+    return MinMaxScaler().fit_transform(np.reshape(dists, (-1, 1))), dists
 
 
-# dimred makes it work, it's not very gaussian otherwise
-tr_X = dimred(tr_X)
+# dimred sometimes necessary, sometimes not
+#tr_X = dimred(tr_X)
 
 gaussians_pen = get_gaussians(pe_X, y)
 gaussians_tra = get_gaussians(tr_X, y)
-tra_dists = scaled_mahalanobis(tr_X, gaussians_tra)
-pen_dists = scaled_mahalanobis(pe_X, gaussians_pen)
+tra_scaled, tra_dists = scaled_mahalanobis(tr_X, gaussians_tra)
+pen_scaled, pen_dists = scaled_mahalanobis(pe_X, gaussians_pen)
 
-print(f"Mean dist for trajectory: IID {np.mean(tra_dists[:10000])}, OOD {np.mean(tra_dists[10000:])}")
-print(f"Mean dist for penultimate: IID {np.mean(pen_dists[:10000])}, OOD {np.mean(pen_dists[10000:])}")
+#print(f"Mean dist for trajectory: IID {np.mean(tra_dists[:10000])}, OOD {np.mean(tra_dists[10000:])}")
+#print(f"Mean dist for penultimate: IID {np.mean(pen_dists[:10000])}, OOD {np.mean(pen_dists[10000:])}")
+print(f"Mean scaled dist for trajectory: IID {np.mean(tra_scaled[:10000])}, OOD {np.mean(tra_scaled[10000:])}")
+print(f"Mean scaled dist for penultimate: IID {np.mean(pen_scaled[:10000])}, OOD {np.mean(pen_scaled[10000:])}")

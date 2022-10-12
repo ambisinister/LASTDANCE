@@ -85,7 +85,7 @@ def extract_features(feature_extractor, loader, node):
 
     return feats
 
-def get_trajectories(net, testloader, testloader_SVHN, plot=False, single_node=None):
+def get_trajectories(net, testloader, testloader_SVHN, test_labs, ood_labs, plot=False, single_node=None):
 
     # Create feature extractor: try to just do all of it and split if memory is an issue
     nodes, _ = get_graph_node_names(net)
@@ -93,12 +93,7 @@ def get_trajectories(net, testloader, testloader_SVHN, plot=False, single_node=N
         nodes = [nodes[single_node]]
         
     pairs = []
-    try:
-        svhn_labs = testset_SVHN.labels
-    except:
-        svhn_labs = testset_SVHN.dataset.labels[testset_SVHN.indices]
-        
-    labs = [*testset.targets, *[10 for _ in svhn_labs]]    
+    labs = [*test_labs, *[10 for _ in ood_labs]]    
 
     for node in nodes:
         print(node)
@@ -140,27 +135,49 @@ if __name__ == "__main__":
     batch_size = 32
 
     # CIFAR10
-    trainset = CIFAR10(root='./data', train=True,
+    trainset_CIFAR = CIFAR10(root='./data', train=True,
                        download=True, transform=transform)
-    trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size,
+    trainloader_CIFAR = torch.utils.data.DataLoader(trainset_CIFAR, batch_size=batch_size,
                                               shuffle=True, num_workers=2)
-    testset = CIFAR10(root='./data', train=False,
+    testset_CIFAR = CIFAR10(root='./data', train=False,
                       download=True, transform=transform)
-    testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size,
+    testloader_CIFAR = torch.utils.data.DataLoader(testset_CIFAR, batch_size=batch_size,
                                              shuffle=False, num_workers=2)
 
-    classes = ('plane', 'car', 'bird', 'cat',
-               'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
+    # SVHN
+    trainset_SVHN = SVHN(root='./data', split='train',
+                        download=True, transform=transform)
+    trainloader_SVHN = torch.utils.data.DataLoader(trainset_SVHN, batch_size=batch_size,
+                                                  shuffle=False, num_workers=2)
 
-    #SVHN
     testset_SVHN = SVHN(root='./data', split='test',
                         download=True, transform=transform)
+    ## Memory
     testset_SVHN = torch.utils.data.Subset(testset_SVHN, list(range(10000)))
     testloader_SVHN = torch.utils.data.DataLoader(testset_SVHN, batch_size=batch_size,
                                                   shuffle=False, num_workers=2)
 
-    
-    
+    in_set = 'cifar'
+
+    if in_set == 'cifar':
+        trainloader = trainloader_CIFAR
+        testloader = testloader_CIFAR
+        oodloader = testloader_SVHN
+        test_labs = testset_CIFAR.targets
+        try:
+            ood_labs = testset_SVHN.labels
+        except:
+            ood_labs = testset_SVHN.dataset.labels[testset_SVHN.indices]
+        
+    else:
+        trainloader = trainloader_SVHN
+        testloader = testloader_SVHN
+        oodloader = testloader_CIFAR
+        ood_labs = testset_CIFAR.targets        
+        try:
+            test_labs = testset_SVHN.labels
+        except:
+            test_labs = testset_SVHN.dataset.labels[testset_SVHN.indices]            
 
     net, criterion, optimizer = get_model()
 
@@ -179,7 +196,7 @@ if __name__ == "__main__":
         trajectories = pickle.load(open('./trajectories.pkl', 'rb'))
         penult = pickle.load(open('./penult_features.pkl', 'rb'))
     except:
-        trajectories = get_trajectories(net, testloader, testloader_SVHN)
+        trajectories = get_trajectories(net, testloader, oodloader, test_labs, ood_labs)
         penult = pickle.load(open('./penult_features.pkl', 'rb'))        
         
     X, y = trajectories
@@ -187,10 +204,12 @@ if __name__ == "__main__":
 
     mapper = umap.UMAP().fit(np.reshape(X, (X.shape[0], np.prod(X.shape[1:]))))
     umap.plot.points(mapper, labels=np.array(y))
+    plt.title("trajectories")
     plt.show()
 
     P, Py = penult
     P = np.array(P)
     mapper = umap.UMAP().fit(np.reshape(P, (P.shape[0], np.prod(P.shape[1:]))))
     umap.plot.points(mapper, labels=np.array(Py))
+    plt.title("penultimate")
     plt.show()
