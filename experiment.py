@@ -10,8 +10,15 @@ import umap
 import umap.plot
 import matplotlib.pyplot as plt
 import pickle
+import argparse
 
 from torchvision.models.feature_extraction import get_graph_node_names, create_feature_extractor
+
+# Parser
+
+parser = argparse.ArgumentParser(description='LASTDANCE: layerwise anomaly detection')
+parser.add_argument('--test', action='store_true', default=False, help="Turn model.eval() on")
+parser.add_argument('--in_set', default='cifar', help="set of data to use as \"In Domain\"")
 
 def get_model(modelname='resnet'):
     if modelname == 'alexnet':
@@ -126,6 +133,7 @@ def get_trajectories(net, testloader, testloader_SVHN, test_labs, ood_labs, plot
 
         
 if __name__ == "__main__":
+    args = parser.parse_args()
 
     transform = transforms.Compose(
         [transforms.ToTensor(),
@@ -157,7 +165,7 @@ if __name__ == "__main__":
     testloader_SVHN = torch.utils.data.DataLoader(testset_SVHN, batch_size=batch_size,
                                                   shuffle=False, num_workers=2)
 
-    in_set = 'cifar'
+    in_set = args.in_set
 
     if in_set == 'cifar':
         trainloader = trainloader_CIFAR
@@ -187,8 +195,8 @@ if __name__ == "__main__":
         net = train_net(net, trainloader, optimizer, criterion)
 
     # Set the model to eval
-    # Comment this line out to leave batch norm layers in
-    # net.eval()
+    if args.test:
+        net.eval()
     
     test(net, testloader)
 
